@@ -1,54 +1,29 @@
 import json
-import os.path
 import random
 import re
 import time
 
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 
 main_url = 'https://moscow.birge.ru/catalog/'
 page = requests.get(main_url)
 
-with open(f'categories.html', 'w') as file:
-    file.write(page.text)
-
-with open(f'categories.html') as file:
-    cat = file.read()
-
 soup = BeautifulSoup(page.text, 'html.parser')
 
-categoru = []
 all_category = soup.find(class_='catalog_categories').find_all('a')
 all_category = re.findall('href=[\'"]?([^\'" >]+)', str(all_category))
+page_from = 1  # пагинация с n-ой страницы
+page_to = 2  # пагинация до n-ой страницы
 for i in all_category:
-    # category = i.find_all(class_='category-container')
     folder_category = f'birge/data/{i.split("/")[-2]}'
-    if os.path.exists(folder_category):
-        pass
-    else:
-        os.mkdir(folder_category)
 
     url = 'https://moscow.birge.ru/catalog/rabota_predlagayu/'
 
-    for i in range(1, 18):
+    for i in range(page_from, page_to):
         page = requests.get(url + f'?PAGEN_1={i}', allow_redirects=False)
 
-        folder_name = f'{folder_category}/page_{i}'
-        if os.path.exists(folder_name):
-            print(folder_name + ' is exists')
-        else:
-            os.mkdir(folder_name)
-
-        category_name = url.split('/')[-2]
-
-        with open(f'birge/data/main.html', 'w') as file:
-            file.write(page.text)
-
-        with open(f'birge/data/main.html') as file:
-            src = file.read()
-        #
-        soup = BeautifulSoup(src, "html.parser")
+        soup = BeautifulSoup(page.text, "html.parser")
         posts = soup.find_all(class_='catalog_item')
 
         detail_urls = []
@@ -57,16 +32,11 @@ for i in all_category:
             detail_url = "https://moscow.birge.ru" + post.find(class_='href-detail').get('href')
             detail_urls.append(detail_url)
 
-        for detail_url in detail_urls[:10]:
+        for detail_url in detail_urls:
             page = requests.get(detail_url)
             post_id = detail_url.split('/')[-2]
-            with open(f'{folder_name}/{post_id}.html', 'w') as file:
-                file.write(page.text)
-            #
-            with open(f'{folder_name}/{post_id}.html') as file:
-                src = file.read()
-            #
-            soup = BeautifulSoup(src, 'lxml')
+
+            soup = BeautifulSoup(page.text, 'lxml')
             detail_data = soup.find(class_='add_content')
             try:
                 detail_data_photo = "https://moscow.birge.ru" + detail_data.find(
@@ -103,17 +73,18 @@ for i in all_category:
 
             posts_list.append(
                 {
-                    'Наименование': detail_data_name,
-                    'Лого URL ': detail_data_photo,
-                    'Описание': detail_data_disc,
-                    'Город': detail_data_city,
-                    'Метро': detail_data_metro,
-                    'Пользователь': detail_data_user,
-                    'Номер': detail_data_number,
-                    'Почта': detail_data_mail,
+                    'ad_name': detail_data_name,
+                    'logo_url': detail_data_photo,
+                    'description': detail_data_disc,
+                    'city': detail_data_city,
+                    'metro': detail_data_metro,
+                    'user': detail_data_user,
+                    'phone_number': detail_data_number,
+                    'email': detail_data_mail,
+                    'link': detail_url,
                 }
             )
             time.sleep(random.randrange(2, 4))
 
-        with open(f'{folder_category}/ads.json', 'a', encoding='utf-8') as file:
+        with open(f'birge/data/ads.json', 'a', encoding='utf-8') as file:
             json.dump(posts_list, file, indent=4, ensure_ascii=False)
