@@ -22,10 +22,6 @@ all_category = re.findall('href=[\'"]?([^\'" >]+)', str(categories))  # ссыл
 
 for i in all_category:  # создаем папку с названием категории
     folder_category = f'data/{i.split("/")[-1]}'
-    if os.path.exists(folder_category):
-        print(f'{folder_category} is exists')
-    else:
-        os.mkdir(folder_category)
 
     url = i  # ссылка на страницу всех обьявлений категории
 
@@ -35,6 +31,7 @@ for i in all_category:  # создаем папку с названием кат
     pagen_count = re.search('из .*.(\d)', pagen_count).group()
     pagen_count = round(int(pagen_count.replace('из ', '')) / 40)  # 40 - кол-во обьявления на странице
     for i in range(1, pagen_count):
+        print(f'Pagen={i}')
         driver.get(url + f'/{i}')
         page = driver.page_source  # страница обьявлений категории
         soup = BeautifulSoup(page, 'html.parser')
@@ -43,6 +40,7 @@ for i in all_category:  # создаем папку с названием кат
         posts = soup.find_all(class_='listing-card')
         detail_urls = []
         posts_list = []
+
         for post in posts:
             detail_url = post.find(class_='listing-thumb').get('href')
             detail_urls.append(detail_url)
@@ -52,24 +50,25 @@ for i in all_category:  # создаем папку с названием кат
             src = driver.page_source
             soup = BeautifulSoup(src, 'html.parser')
             content = soup.find(id='jarnama')
+
             try:
                 title = content.find('h1').text
-            except Exception as ex:
+            except Exception:
                 title = 'No'
 
             desc_content = content.find(id='description')
             try:
                 desc = desc_content.find('p').text
-            except Exception as ex:
+            except Exception:
                 desc = 'No'
             try:
                 user = desc_content.find_all('span')[1].text
-            except Exception as ex:
+            except Exception:
                 user = "Unknown"
             try:
                 number = desc_content.find('a').text
 
-            except Exception as ex:
+            except Exception:
                 number = "Unknown"
 
             location_content = soup.find(id='item_location')
@@ -77,19 +76,31 @@ for i in all_category:  # создаем папку с названием кат
             try:
                 location = str((location_content.find_all('li')[0]).text.split(':')[1].strip())
 
-            except Exception as ex:
+            except Exception:
                 location = "Unknown"
+            try:
+                images = []
+                photo_content = content.find(class_='item-photos').find(class_='thumbs')
+                content_images = photo_content.find_all('img')
+                for image in content_images:
+                    img = (image['src'])
+                    images.append(img)
+            except Exception:
+                images = ['No photo']
+
             posts_list.append(
                 {
-                    "Название": title,
-                    "Описание": desc,
-                    "Пользователь": user,
-                    "Номер": number,
-                    "Местоположение": location,
+                    'ad_name': title,
+                    'logo_url': images,
+                    'description': desc,
+                    'user': user,
+                    'phone_number': number,
+                    'location': location,
+                    'link': detail_url,
 
                 }
             )
-            time.sleep(random.randrange(2, 4))
+            # time.sleep(random.randrange(2, 4))
 
-        with open(f'{folder_category}/ads.json', 'a', encoding='utf-8') as file:
+        with open(f'ads.json', 'a', encoding='utf-8') as file:
             json.dump(posts_list, file, indent=4, ensure_ascii=False)
