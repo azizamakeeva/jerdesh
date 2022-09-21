@@ -88,11 +88,17 @@ for i in all_category:  # создаем папку с названием кат
             except Exception:
                 images = ['No photo']
 
+            try:
+                category = folder_category.split('/')[-1]
+            except Exception:
+                category = 'None'
+
             posts_list.append(
                 {
                     'ad_name': title,
                     'logo_url': images,
                     'description': desc,
+                    'category': category,
                     'user': user,
                     'phone_number': number,
                     'location': location,
